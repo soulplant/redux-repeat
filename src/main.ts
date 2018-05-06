@@ -73,6 +73,11 @@ type RunningThread = {
   thread: Thread;
 };
 
+interface ThreadAPI {
+  resume(value: any): void;
+  error(error: any): void;
+}
+
 export class RouteBuilder {
   private routes: { [type: string]: RouteEntry } = {};
   private threads: { [type: string]: RunningThread } = {};
@@ -104,6 +109,22 @@ export class RouteBuilder {
     if (thread) {
       this.threads[action.type] = thread;
     }
+  }
+
+  getThread(name: string, step: string): ThreadAPI {
+    const thread = this.getRunningThread(name, step);
+    const self = this;
+    return {
+      resume(value: any): void {
+        const result = thread.thread.next(value);
+        if (result.done) {
+          self.removeCompletedThread(name, step);
+          return;
+        }
+        thread.effect = result.value;
+      },
+      error(error: any): void {}
+    };
   }
 
   continueThread(name: string, step: string, value: any): void {
